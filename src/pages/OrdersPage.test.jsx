@@ -65,6 +65,17 @@ describe("OrdersPage", () => {
     });
   });
 
+  it("does not offer invalid transitions from a terminal status", async () => {
+    mocks.auth.current = { user: { id: 1, username: "smith" }, hasRole: () => true };
+    mocks.list.mockResolvedValue([{ ...orders[0], status: "DELIVERED" }]);
+    renderWithProviders(<OrdersPage />);
+
+    const select = await screen.findByLabelText("Estado del pedido 5");
+
+    expect(select).toBeDisabled();
+    expect(screen.queryByRole("option", { name: "Pagado" })).not.toBeInTheDocument();
+  });
+
   it("shows the empty state", async () => {
     mocks.list.mockResolvedValue([]);
     renderWithProviders(<OrdersPage />);

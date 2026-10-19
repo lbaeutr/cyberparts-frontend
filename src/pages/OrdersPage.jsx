@@ -4,7 +4,13 @@ import { ordersApi } from "../api/services";
 import { useAuth } from "../context/AuthContext";
 import { ORDER_STATUS, money } from "../utils/format";
 
-const STATUSES = Object.keys(ORDER_STATUS);
+const ALLOWED_TRANSITIONS = {
+  PENDING: ["PAID", "CANCELLED"],
+  PAID: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELLED: [],
+};
 
 export default function OrdersPage() {
   const { hasRole, user } = useAuth();
@@ -83,10 +89,12 @@ export default function OrdersPage() {
                   style={{ maxWidth: 180 }}
                   value={order.status}
                   onChange={(e) => mutation.mutate({ id: order.id, status: e.target.value })}
+                  disabled={(ALLOWED_TRANSITIONS[order.status] ?? []).length === 0}
                 >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {ORDER_STATUS[s]}
+                  <option value={order.status}>{ORDER_STATUS[order.status]}</option>
+                  {(ALLOWED_TRANSITIONS[order.status] ?? []).map((status) => (
+                    <option key={status} value={status}>
+                      {ORDER_STATUS[status]}
                     </option>
                   ))}
                 </select>
