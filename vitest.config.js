@@ -10,8 +10,17 @@ export default defineConfig({
     css: false,
     restoreMocks: true,
     pool: "threads",
-    poolOptions: {
-      threads: { singleThread: true },
+    maxWorkers: 1,
+    fileParallelism: false,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      thresholds: {
+        statements: 85,
+        branches: 75,
+        functions: 80,
+        lines: 85,
+      },
     },
   },
 });

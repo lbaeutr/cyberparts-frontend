@@ -41,6 +41,14 @@ describe("LoginPage", () => {
     expect(await screen.findByText("pagina inicio")).toBeInTheDocument();
   });
 
+  it("redirects authenticated users to the catalog", async () => {
+    auth.current = { user: { username: "neo" }, initializing: false, login: vi.fn() };
+    renderLogin();
+
+    expect(await screen.findByText("pagina inicio")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Usuario o correo")).not.toBeInTheDocument();
+  });
+
   it("returns to the requested page after login", async () => {
     const user = userEvent.setup();
     renderLogin({ pathname: "/login", state: { from: "/carrito" } });

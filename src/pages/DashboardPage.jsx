@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { productsApi } from "../api/services";
+import { useToast } from "../context/ToastContext";
 import { CATEGORIES, categoryIcon, money } from "../utils/format";
+import { getErrorMessage } from "../utils/errors";
+
+const PAGE_SIZE = 25;
 
 const EMPTY = {
   name: "",
@@ -16,17 +20,22 @@ const EMPTY = {
 
 export default function DashboardPage() {
   const qc = useQueryClient();
+  const { notify } = useToast();
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["products", "all"],
-    queryFn: () => productsApi.list({ only_active: false, limit: 100 }),
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: ["products", "all", page],
+    queryFn: () =>
+      productsApi.list({ only_active: false, skip: page * PAGE_SIZE, limit: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["products"] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["product"] });
+  };
 
   const saveMutation = useMutation({
     mutationFn: (payload) =>
@@ -35,24 +44,22 @@ export default function DashboardPage() {
       invalidate();
       setForm(EMPTY);
       setEditingId(null);
-      setError("");
-      setMessage(editingId ? "Producto actualizado." : "Producto creado.");
+      notify(editingId ? "Producto actualizado." : "Producto creado.");
     },
-    onError: (err) => setError(err.response?.data?.detail || "Error al guardar"),
+    onError: (err) => notify(getErrorMessage(err, "Error al guardar"), "error"),
   });
 
   const removeMutation = useMutation({
     mutationFn: (id) => productsApi.remove(id),
     onSuccess: () => {
       invalidate();
-      setMessage("Producto desactivado.");
+      notify("Producto desactivado.");
     },
+    onError: (err) => notify(getErrorMessage(err, "No se pudo desactivar el producto"), "error"),
   });
 
   const submit = (e) => {
     e.preventDefault();
-    setMessage("");
-    setError("");
     saveMutation.mutate({
       ...form,
       price: Number(form.price),
@@ -63,7 +70,6 @@ export default function DashboardPage() {
 
   const edit = (p) => {
     setEditingId(p.id);
-    setMessage("");
     setForm({
       name: p.name,
       category: p.category,
@@ -84,9 +90,6 @@ export default function DashboardPage() {
           <p>Crea, edita y desactiva piezas del catálogo.</p>
         </div>
       </div>
-
-      {message && <div className="alert ok">{message}</div>}
-      {error && <div className="alert error">{error}</div>}
 
       <div className="card" style={{ marginBottom: "1.5rem" }}>
         <h3>{editingId ? `Editando producto #${editingId}` : "Nuevo producto"}</h3>
@@ -184,51 +187,95 @@ export default function DashboardPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="loading">Cargando...</div>
+          <div className="loading" role="status">
+            Cargando...
+          </div>
+        ) : error ? (
+          <>
+            <div className="alert error" role="alert">
+              No se pudieron cargar los productos.
+            </div>
+            <button className="btn ghost" onClick={() => refetch()} disabled={isFetching}>
+              {isFetching ? "Reintentando..." : "Reintentar"}
+            </button>
+          </>
+        ) : data?.length === 0 ? (
+          <div className="center muted">Sin productos en el catálogo.</div>
         ) : (
           <div className="table-wrap">
             <table className="table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Producto</th>
-                <th>Categoría</th>
-                <th>Precio</th>
-                <th>Stock</th>
-                <th>Estado</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.map((p) => (
-                <tr key={p.id}>
-                  <td style={{ color: "var(--accent)" }}>{categoryIcon(p.category)}</td>
-                  <td>{p.name}</td>
-                  <td className="muted">{p.category}</td>
-                  <td>{money(p.price)}</td>
-                  <td>{p.stock}</td>
-                  <td>
-                    <span className="badge">{p.is_active ? "Activo" : "Inactivo"}</span>
-                  </td>
-                  <td>
-                    <div className="row" style={{ gap: "0.4rem" }}>
-                      <button className="btn sm ghost" onClick={() => edit(p)}>
-                        Editar
-                      </button>
-                      {p.is_active && (
-                        <button className="btn sm danger" onClick={() => removeMutation.mutate(p.id)}>
-                          Desactivar
-                        </button>
-                      )}
-                    </div>
-                  </td>
+              <thead>
+                <tr>
+                  <th scope="col"></th>
+                  <th scope="col">Producto</th>
+                  <th scope="col">Categoría</th>
+                  <th scope="col">Precio</th>
+                  <th scope="col">Stock</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data?.map((p) => (
+                  <tr key={p.id}>
+                    <td style={{ color: "var(--accent)" }}>{categoryIcon(p.category)}</td>
+                    <td>{p.name}</td>
+                    <td className="muted">{p.category}</td>
+                    <td>{money(p.price)}</td>
+                    <td>{p.stock}</td>
+                    <td>
+                      <span className="badge">{p.is_active ? "Activo" : "Inactivo"}</span>
+                    </td>
+                    <td>
+                      <div className="row" style={{ gap: "0.4rem" }}>
+                        <button className="btn sm ghost" onClick={() => edit(p)}>
+                          Editar
+                        </button>
+                        {p.is_active && (
+                          <button
+                            className="btn sm danger"
+                            onClick={() => {
+                              if (!window.confirm(`¿Desactivar "${p.name}"?`)) return;
+                              removeMutation.mutate(p.id);
+                            }}
+                            disabled={removeMutation.isPending && removeMutation.variables === p.id}
+                          >
+                            {removeMutation.isPending && removeMutation.variables === p.id
+                              ? "..."
+                              : "Desactivar"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+
+      {!error && ((data?.length ?? 0) === PAGE_SIZE || page > 0) && (
+        <div className="row" style={{ marginTop: "1rem" }}>
+          <span className="muted">Página {page + 1}</span>
+          <div className="row right" style={{ gap: "0.5rem" }}>
+            <button
+              className="btn sm ghost"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 0}
+            >
+              Anterior
+            </button>
+            <button
+              className="btn sm ghost"
+              onClick={() => setPage(page + 1)}
+              disabled={(data?.length ?? 0) < PAGE_SIZE}
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

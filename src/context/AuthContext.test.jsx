@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   refreshSession: vi.fn(),
   setAccessToken: vi.fn(),
   setUnauthorizedHandler: vi.fn(),
+  setUserUpdateHandler: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
   register: vi.fn(),
@@ -17,6 +19,7 @@ vi.mock("../api/client", () => ({
   refreshSession: mocks.refreshSession,
   setAccessToken: mocks.setAccessToken,
   setUnauthorizedHandler: mocks.setUnauthorizedHandler,
+  setUserUpdateHandler: mocks.setUserUpdateHandler,
 }));
 
 vi.mock("../api/services", () => ({
@@ -43,11 +46,17 @@ function Probe() {
 }
 
 function renderAuth() {
-  return render(
-    <AuthProvider>
-      <Probe />
-    </AuthProvider>
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const utils = render(
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>
+    </QueryClientProvider>
   );
+  return { queryClient, ...utils };
 }
 
 describe("AuthContext", () => {
@@ -134,5 +143,36 @@ describe("AuthContext", () => {
     act(() => handler());
 
     expect(screen.getByTestId("state")).toHaveTextContent("anon");
+  });
+
+  it("clears the query cache and the cart on logout", async () => {
+    mocks.refreshSession.mockResolvedValue({
+      access_token: "access",
+      user: { username: "neo", role: "CLIENTE" },
+    });
+    const user = userEvent.setup();
+    const { queryClient } = renderAuth();
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("neo"));
+    queryClient.setQueryData(["secreto"], "de-neo");
+
+    const onReset = vi.fn();
+    window.addEventListener("cyberparts:session-reset", onReset);
+    await user.click(screen.getByRole("button", { name: "logout" }));
+    window.removeEventListener("cyberparts:session-reset", onReset);
+
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("anon"));
+    expect(queryClient.getQueryData(["secreto"])).toBeUndefined();
+    expect(onReset).toHaveBeenCalled();
+  });
+
+  it("updates the user when the api client refreshes the session", async () => {
+    renderAuth();
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("anon"));
+
+    const handler = mocks.setUserUpdateHandler.mock.calls.at(-1)[0];
+    act(() => handler({ username: "smith", role: "ADMIN" }));
+
+    expect(screen.getByTestId("state")).toHaveTextContent("smith");
+    expect(screen.getByTestId("role")).toHaveTextContent("admin");
   });
 });

@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithProviders } from "../test/render";
 import AdminUsersPage from "./AdminUsersPage";
@@ -43,8 +43,13 @@ function rowOf(username) {
 }
 
 describe("AdminUsersPage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     mocks.list.mockResolvedValue(users);
     mocks.setRole.mockResolvedValue({});
     mocks.setActive.mockResolvedValue({});
@@ -101,6 +106,48 @@ describe("AdminUsersPage", () => {
     await waitFor(() => {
       expect(mocks.setActive).toHaveBeenCalledWith(2, false);
     });
+  });
+
+  it("does nothing when the delete confirmation is rejected", async () => {
+    window.confirm.mockReturnValue(false);
+    const user = userEvent.setup();
+    renderWithProviders(<AdminUsersPage />);
+    await screen.findByText("neo");
+
+    await user.click(within(rowOf("neo")).getByRole("button", { name: "Eliminar" }));
+
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+
+  it("shows the load error with a retry button", async () => {
+    mocks.list.mockRejectedValueOnce(new Error("boom"));
+    const user = userEvent.setup();
+    renderWithProviders(<AdminUsersPage />);
+
+    expect(await screen.findByText("No se pudieron cargar los usuarios.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    expect(await screen.findByText("neo")).toBeInTheDocument();
+  });
+
+  it("paginates lists longer than one page", async () => {
+    const many = Array.from({ length: 25 }, (_, index) => ({
+      id: index + 1,
+      username: `user${index + 1}`,
+      email: `user${index + 1}@matrix.dev`,
+      role: "CLIENTE",
+      is_active: true,
+    }));
+    mocks.list.mockResolvedValue(many);
+    const user = userEvent.setup();
+    renderWithProviders(<AdminUsersPage />);
+    await screen.findByText("user1");
+
+    expect(screen.queryByText("user21")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+
+    expect(await screen.findByText("user21")).toBeInTheDocument();
+    expect(screen.queryByText("user1")).not.toBeInTheDocument();
   });
 
   it("deletes another user", async () => {

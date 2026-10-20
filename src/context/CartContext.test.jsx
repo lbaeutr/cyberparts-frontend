@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -12,10 +12,10 @@ function Probe() {
     <div>
       <span data-testid="count">{cart.count}</span>
       <span data-testid="total">{cart.total}</span>
-      <span data-testid="items">{cart.items.map((item) => `${item.name}:${item.quantity}`).join(",")}</span>
-      <button onClick={() => cart.add({ id: 1, name: "Servo", price: 10, stock: 5 })}>
-        add
-      </button>
+      <span data-testid="items">
+        {cart.items.map((item) => `${item.name}:${item.quantity}`).join(",")}
+      </span>
+      <button onClick={() => cart.add({ id: 1, name: "Servo", price: 10, stock: 5 })}>add</button>
       <button onClick={() => cart.setQuantity(1, 3)}>quantity</button>
       <button onClick={() => cart.remove(1)}>remove</button>
       <button onClick={cart.clear}>clear</button>
@@ -84,6 +84,46 @@ describe("CartContext", () => {
     expect(screen.getByTestId("total")).toHaveTextContent("20");
   });
 
+  it("ignores a corrupted cart instead of crashing", () => {
+    localStorage.setItem(STORAGE_KEY, "{no-es-json");
+
+    renderCart();
+
+    expect(screen.getByTestId("count")).toHaveTextContent("0");
+  });
+
+  it("drops items with an invalid shape", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        { product_id: 1, name: "Servo", price: 10, stock: 5, quantity: 2 },
+        { product_id: "malo", price: 10, quantity: 1 },
+        { product_id: 2, name: "Sensor", price: "gratis", quantity: 1 },
+        { product_id: 3, name: "Chasis", price: 5, quantity: 0 },
+      ])
+    );
+
+    renderCart();
+
+    expect(screen.getByTestId("items")).toHaveTextContent("Servo:2");
+    expect(screen.getByTestId("count")).toHaveTextContent("2");
+  });
+
+  it("empties the cart when the session is reset", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([{ product_id: 1, name: "Servo", price: 10, stock: 5, quantity: 2 }])
+    );
+    renderCart();
+    expect(screen.getByTestId("count")).toHaveTextContent("2");
+
+    act(() => {
+      window.dispatchEvent(new Event("cyberparts:session-reset"));
+    });
+
+    expect(screen.getByTestId("count")).toHaveTextContent("0");
+  });
+
   it("persists changes in localStorage", async () => {
     const user = userEvent.setup();
     renderCart();
@@ -96,5 +136,4 @@ describe("CartContext", () => {
       expect(stored[0].name).toBe("Servo");
     });
   });
-
 });

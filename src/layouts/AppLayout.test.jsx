@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -77,9 +77,7 @@ describe("AppLayout", () => {
   it("toggles the theme", async () => {
     const user = userEvent.setup();
     renderLayout();
-    await waitFor(() =>
-      expect(document.documentElement).toHaveAttribute("data-theme", "dark")
-    );
+    await waitFor(() => expect(document.documentElement).toHaveAttribute("data-theme", "dark"));
 
     await user.click(screen.getByTitle("Cambiar tema"));
 
@@ -101,6 +99,50 @@ describe("AppLayout", () => {
     await user.click(toggle);
 
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("moves focus into the sidebar when it opens on small screens", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: 500,
+    });
+    const user = userEvent.setup();
+    renderLayout();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+
+    const sidebar = screen.getByRole("complementary");
+    const firstLink = within(sidebar).getAllByRole("link")[0];
+    expect(firstLink).toHaveFocus();
+  });
+
+  it("closes the sidebar with Escape on small screens", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: 500,
+    });
+    const user = userEvent.setup();
+    renderLayout();
+
+    const toggle = screen.getByRole("button", { name: "Menú" });
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.keyboard("{Escape}");
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("offers a skip link to the main content", () => {
+    renderLayout();
+
+    expect(screen.getByRole("link", { name: "Saltar al contenido" })).toHaveAttribute(
+      "href",
+      "#contenido"
+    );
+    expect(document.querySelector("main")).toHaveAttribute("id", "contenido");
   });
 
   it("logs out and navigates home", async () => {

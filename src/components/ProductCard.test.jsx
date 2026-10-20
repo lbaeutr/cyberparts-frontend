@@ -47,17 +47,31 @@ describe("ProductCard", () => {
     expect(screen.getByText("Servomotor X1")).toBeInTheDocument();
     expect(screen.getByText("Servomotores")).toBeInTheDocument();
     expect(screen.getByText("stock 4")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ver Servomotor X1" })).toHaveAttribute(
       "href",
       "/producto/7"
     );
+  });
+
+  it("renders the product image when the url is valid", () => {
+    renderCard({ image_url: "https://cdn.example.com/servo.png" });
+
+    const image = screen.getByRole("img", { name: "Servomotor X1" });
+    expect(image).toHaveAttribute("src", "https://cdn.example.com/servo.png");
+    expect(image).toHaveAttribute("loading", "lazy");
+  });
+
+  it("ignores unsafe image urls", () => {
+    renderCard({ image_url: "javascript:alert(1)" });
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("adds the product to the cart", async () => {
     const user = userEvent.setup();
     renderCard();
 
-    await user.click(screen.getByRole("button", { name: "+ Carrito" }));
+    await user.click(screen.getByRole("button", { name: "Añadir Servomotor X1 al carrito" }));
 
     expect(mocks.add).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
   });
@@ -65,17 +79,19 @@ describe("ProductCard", () => {
   it("disables the add button when there is no stock", () => {
     renderCard({ stock: 0 });
 
-    expect(screen.getByRole("button", { name: "+ Carrito" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Añadir Servomotor X1 al carrito" })).toBeDisabled();
   });
 
   it("hides the add button for staff", () => {
-    mocks.hasRole.mockImplementation((...roles) =>
-      roles.includes("ADMIN") || roles.includes("GESTOR")
+    mocks.hasRole.mockImplementation(
+      (...roles) => roles.includes("ADMIN") || roles.includes("GESTOR")
     );
 
     renderCard();
 
-    expect(screen.queryByRole("button", { name: "+ Carrito" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Añadir Servomotor X1 al carrito" })
+    ).not.toBeInTheDocument();
   });
 
   it("shows the add button for clients", () => {
@@ -83,6 +99,8 @@ describe("ProductCard", () => {
 
     renderCard();
 
-    expect(screen.getByRole("button", { name: "+ Carrito" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Añadir Servomotor X1 al carrito" })
+    ).toBeInTheDocument();
   });
 });

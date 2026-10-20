@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { getErrorMessage } from "../utils/errors";
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { user, initializing, register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  if (!initializing && user) return <Navigate to="/" replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -22,7 +25,7 @@ export default function RegisterPage() {
       await register(form);
       navigate("/", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || "No se pudo completar el registro");
+      setError(getErrorMessage(err, "No se pudo completar el registro"));
     } finally {
       setLoading(false);
     }
@@ -34,11 +37,15 @@ export default function RegisterPage() {
         <span className="eyebrow">Nuevo operador</span>
         <h1>Crear cuenta</h1>
         <p className="muted" style={{ fontSize: "0.85rem" }}>
-          Tu contraseña se almacena hasheada con bcrypt. Los nuevos registros se crean como
-          rol <strong>Cliente</strong>.
+          Tu contraseña se almacena hasheada con bcrypt. Los nuevos registros se crean como rol{" "}
+          <strong>Cliente</strong>.
         </p>
 
-        {error && <div className="alert error">{error}</div>}
+        {error && (
+          <div className="alert error" role="alert">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={submit}>
           <div className="field">

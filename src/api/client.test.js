@@ -7,6 +7,7 @@ import api, {
   refreshSession,
   setAccessToken,
   setUnauthorizedHandler,
+  setUserUpdateHandler,
 } from "./client";
 
 describe("api client", () => {
@@ -18,6 +19,7 @@ describe("api client", () => {
     axiosMock = new MockAdapter(axios);
     setAccessToken(null);
     setUnauthorizedHandler(null);
+    setUserUpdateHandler(null);
   });
 
   afterEach(() => {
@@ -25,6 +27,7 @@ describe("api client", () => {
     axiosMock.restore();
     setAccessToken(null);
     setUnauthorizedHandler(null);
+    setUserUpdateHandler(null);
   });
 
   it("adds the bearer token to requests", async () => {
@@ -96,12 +99,41 @@ describe("api client", () => {
     expect(axiosMock.history.post).toHaveLength(0);
   });
 
-  it("refreshSession stores the new access token", async () => {
-    axiosMock.onPost("/api/auth/refresh").reply(200, { access_token: "fresh" });
+  it("refreshSession stores the new access token and syncs the user", async () => {
+    const onUserUpdated = vi.fn();
+    setUserUpdateHandler(onUserUpdated);
+    axiosMock
+      .onPost("/api/auth/refresh")
+      .reply(200, { access_token: "fresh", user: { username: "smith", role: "ADMIN" } });
 
     const data = await refreshSession();
 
     expect(data.access_token).toBe("fresh");
     expect(getAccessToken()).toBe("fresh");
+    expect(onUserUpdated).toHaveBeenCalledWith({ username: "smith", role: "ADMIN" });
+  });
+
+  it("logs out when the user has been deactivated", async () => {
+    const onUnauthorized = vi.fn();
+    setAccessToken("token-1");
+    setUnauthorizedHandler(onUnauthorized);
+    apiMock.onGet("/data").reply(403, { detail: "Usuario desactivado" });
+
+    await expect(api.get("/data")).rejects.toBeTruthy();
+
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    expect(getAccessToken()).toBeNull();
+  });
+
+  it("keeps the session on a regular 403", async () => {
+    const onUnauthorized = vi.fn();
+    setAccessToken("token-1");
+    setUnauthorizedHandler(onUnauthorized);
+    apiMock.onGet("/data").reply(403, { detail: "No tienes permisos" });
+
+    await expect(api.get("/data")).rejects.toBeTruthy();
+
+    expect(onUnauthorized).not.toHaveBeenCalled();
+    expect(getAccessToken()).toBe("token-1");
   });
 });

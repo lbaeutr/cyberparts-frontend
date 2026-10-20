@@ -1,16 +1,18 @@
+import { lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import AppLayout from "./layouts/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import CatalogPage from "./pages/CatalogPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import CartPage from "./pages/CartPage";
-import OrdersPage from "./pages/OrdersPage";
-import DashboardPage from "./pages/DashboardPage";
-import AdminUsersPage from "./pages/AdminUsersPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import NotFoundPage from "./pages/NotFoundPage";
+
+const CatalogPage = lazy(() => import("./pages/CatalogPage"));
+const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
+const CartPage = lazy(() => import("./pages/CartPage"));
+const OrdersPage = lazy(() => import("./pages/OrdersPage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 export default function App() {
   return (

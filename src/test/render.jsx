@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
 import { ThemeProvider } from "../context/ThemeContext";
+import { ToastProvider } from "../context/ToastContext";
 
 export function makeQueryClient() {
   return new QueryClient({
@@ -19,11 +20,13 @@ export function renderWithProviders(ui, { route = "/" } = {}) {
   return render(
     <QueryClientProvider client={makeQueryClient()}>
       <ThemeProvider>
-        <MemoryRouter initialEntries={[route]}>
-          <AuthProvider>
-            <CartProvider>{ui}</CartProvider>
-          </AuthProvider>
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter initialEntries={[route]}>
+            <AuthProvider>
+              <CartProvider>{ui}</CartProvider>
+            </AuthProvider>
+          </MemoryRouter>
+        </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

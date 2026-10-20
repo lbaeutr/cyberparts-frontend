@@ -1,17 +1,27 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
 
 import { categoryIcon, money } from "../utils/format";
+import { canShop as userCanShop } from "../utils/roles";
+import { safeImageUrl } from "../utils/urls";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 
-export default function ProductCard({ product }) {
+function ProductCard({ product }) {
   const { add } = useCart();
   const { hasRole } = useAuth();
-  const canShop = hasRole("CLIENTE") || !hasRole("ADMIN", "GESTOR");
+  const canShop = userCanShop(hasRole);
+  const imageUrl = safeImageUrl(product.image_url);
 
   return (
     <article className="card product-card">
-      <div className="product-thumb">{categoryIcon(product.category)}</div>
+      <div className="product-thumb">
+        {imageUrl ? (
+          <img className="product-thumb-img" src={imageUrl} alt={product.name} loading="lazy" />
+        ) : (
+          categoryIcon(product.category)
+        )}
+      </div>
       <div className="product-meta">
         <span className="eyebrow">{product.category}</span>
         <span>stock {product.stock}</span>
@@ -24,7 +34,11 @@ export default function ProductCard({ product }) {
       <div className="row">
         <span className="product-price">{money(product.price)}</span>
         <div className="right row">
-          <Link className="btn sm ghost" to={`/producto/${product.id}`}>
+          <Link
+            className="btn sm ghost"
+            to={`/producto/${product.id}`}
+            aria-label={`Ver ${product.name}`}
+          >
             Ver
           </Link>
           {canShop && (
@@ -32,6 +46,7 @@ export default function ProductCard({ product }) {
               className="btn sm primary"
               onClick={() => add(product)}
               disabled={product.stock <= 0}
+              aria-label={`Añadir ${product.name} al carrito`}
             >
               + Carrito
             </button>
@@ -41,3 +56,5 @@ export default function ProductCard({ product }) {
     </article>
   );
 }
+
+export default memo(ProductCard);

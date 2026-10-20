@@ -1,15 +1,18 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { getErrorMessage } from "../utils/errors";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { user, initializing, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  if (!initializing && user) return <Navigate to="/" replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -19,7 +22,7 @@ export default function LoginPage() {
       await login(form.username, form.password);
       navigate(location.state?.from || "/", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || "No se pudo iniciar sesión");
+      setError(getErrorMessage(err, "No se pudo iniciar sesión"));
     } finally {
       setLoading(false);
     }
@@ -34,7 +37,11 @@ export default function LoginPage() {
           Autenticación con JWT + refresh token (cookie httpOnly).
         </p>
 
-        {error && <div className="alert error">{error}</div>}
+        {error && (
+          <div className="alert error" role="alert">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={submit}>
           <div className="field">

@@ -85,15 +85,34 @@ describe("ProductDetailPage", () => {
     renderDetail();
     await screen.findByText("Servomotor X1");
 
-    expect(
-      screen.queryByRole("button", { name: "Añadir al carrito" })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Añadir al carrito" })).not.toBeInTheDocument();
   });
 
   it("shows an error when the product does not exist", async () => {
-    mocks.get.mockRejectedValue(new Error("404"));
+    mocks.get.mockRejectedValue({ response: { status: 404 } });
     renderDetail();
 
     expect(await screen.findByText("Producto no encontrado.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reintentar" })).not.toBeInTheDocument();
+  });
+
+  it("explains a forbidden product", async () => {
+    mocks.get.mockRejectedValue({ response: { status: 403 } });
+    renderDetail();
+
+    expect(
+      await screen.findByText("No tienes permiso para ver este producto.")
+    ).toBeInTheDocument();
+  });
+
+  it("offers a retry for unexpected errors", async () => {
+    mocks.get.mockRejectedValueOnce({ response: { status: 500 } });
+    const user = userEvent.setup();
+    renderDetail();
+
+    expect(await screen.findByText("No se pudo cargar el producto.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    expect(await screen.findByText("Servomotor X1")).toBeInTheDocument();
   });
 });

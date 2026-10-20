@@ -4,6 +4,7 @@ import axios from "axios";
 // El refresh token va en una cookie httpOnly que el navegador envia solo.
 let accessToken = null;
 let onUnauthorized = null;
+let onUserUpdated = null;
 
 export function setAccessToken(token) {
   accessToken = token;
@@ -14,9 +15,14 @@ export function getAccessToken() {
 export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler;
 }
+export function setUserUpdateHandler(handler) {
+  onUserUpdated = handler;
+}
+
+export const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: API_BASE,
   withCredentials: true,
 });
 
@@ -34,9 +40,10 @@ let refreshingPromise = null;
 export async function refreshSession() {
   if (!refreshingPromise) {
     refreshingPromise = axios
-      .post("/api/auth/refresh", {}, { withCredentials: true })
+      .post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true })
       .then((res) => {
         setAccessToken(res.data.access_token);
+        if (res.data.user && onUserUpdated) onUserUpdated(res.data.user);
         return res.data;
       })
       .finally(() => {
@@ -52,6 +59,15 @@ api.interceptors.response.use(
     const { response, config } = error;
     const isAuthCall =
       config?.url?.includes("/auth/refresh") || config?.url?.includes("/auth/login");
+
+    const deactivated =
+      response?.status === 403 && /desactivad/i.test(String(response?.data?.detail ?? ""));
+
+    if (deactivated) {
+      setAccessToken(null);
+      if (onUnauthorized) onUnauthorized();
+      return Promise.reject(error);
+    }
 
     if (response?.status === 401 && !config?._retry && !isAuthCall) {
       config._retry = true;

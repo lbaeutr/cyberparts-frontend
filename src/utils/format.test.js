@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  CATEGORIES,
-  ORDER_STATUS,
-  ROLE_LABEL,
-  categoryIcon,
-  money,
-} from "./format";
+import { CATEGORIES, ORDER_STATUS, ROLE_LABEL, categoryIcon, money } from "./format";
 
 describe("format", () => {
   it("formats money in euros", () => {

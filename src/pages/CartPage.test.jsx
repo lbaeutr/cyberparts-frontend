@@ -8,6 +8,7 @@ import CartPage from "./CartPage";
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
+  getProduct: vi.fn(),
   auth: { current: { user: null } },
 }));
 
@@ -17,6 +18,10 @@ vi.mock("../api/services", () => ({
     list: vi.fn(),
     get: vi.fn(),
     setStatus: vi.fn(),
+  },
+  productsApi: {
+    list: vi.fn(),
+    get: mocks.getProduct,
   },
 }));
 
@@ -49,6 +54,7 @@ describe("CartPage", () => {
     localStorage.clear();
     mocks.auth.current = { user: { username: "neo", role: "CLIENTE" } };
     mocks.create.mockResolvedValue({ id: 1 });
+    mocks.getProduct.mockResolvedValue({ id: 1, name: "Servo", price: 10, stock: 5 });
   });
 
   it("shows the empty state", () => {
@@ -67,7 +73,6 @@ describe("CartPage", () => {
 
   it("updates the quantity and total", async () => {
     seedCart();
-    const user = userEvent.setup();
     renderCart();
 
     fireEvent.change(screen.getByLabelText("Cantidad de Servo"), { target: { value: "3" } });
@@ -108,6 +113,56 @@ describe("CartPage", () => {
     await user.click(screen.getByRole("button", { name: "Inicia sesión para pedir" }));
 
     expect(await screen.findByText("pagina login")).toBeInTheDocument();
+  });
+
+  it("uses the current product price instead of the saved snapshot", async () => {
+    mocks.getProduct.mockResolvedValue({ id: 1, name: "Servo", price: 12.5, stock: 5 });
+    seedCart();
+    renderCart();
+
+    expect((await screen.findAllByText(/25,00/)).length).toBeGreaterThan(0);
+  });
+
+  it("blocks checkout when a product is no longer available", async () => {
+    mocks.getProduct.mockRejectedValue({ response: { status: 404 } });
+    seedCart();
+    renderCart();
+
+    expect(
+      await screen.findByText("Algunos productos ya no están disponibles. Quítalos para continuar.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirmar pedido" })).toBeDisabled();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("blocks checkout when a product has been deactivated", async () => {
+    mocks.getProduct.mockResolvedValue({
+      id: 1,
+      name: "Servo",
+      price: 10,
+      stock: 5,
+      is_active: false,
+    });
+    seedCart();
+    renderCart();
+
+    expect(
+      await screen.findByText("Algunos productos ya no están disponibles. Quítalos para continuar.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirmar pedido" })).toBeDisabled();
+  });
+
+  it("blocks checkout when the quantity exceeds the current stock", async () => {
+    mocks.getProduct.mockResolvedValue({ id: 1, name: "Servo", price: 10, stock: 1 });
+    seedCart();
+    renderCart();
+
+    expect(
+      await screen.findByText(
+        "Hay cantidades por encima del stock actual. Ajusta el carrito para continuar."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirmar pedido" })).toBeDisabled();
   });
 
   it("shows the checkout error", async () => {

@@ -37,6 +37,14 @@ describe("RegisterPage", () => {
     auth.current = { register: vi.fn().mockResolvedValue({ username: "neo" }) };
   });
 
+  it("redirects authenticated users to the catalog", async () => {
+    auth.current = { user: { username: "neo" }, initializing: false, register: vi.fn() };
+    renderRegister();
+
+    expect(await screen.findByText("pagina inicio")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Usuario")).not.toBeInTheDocument();
+  });
+
   it("registers and navigates home", async () => {
     const user = await fillForm();
 
@@ -69,8 +77,6 @@ describe("RegisterPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Registrarme" }));
 
-    expect(
-      await screen.findByText("El usuario o correo ya esta registrado")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("El usuario o correo ya esta registrado")).toBeInTheDocument();
   });
 });

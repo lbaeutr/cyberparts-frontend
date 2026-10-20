@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithProviders } from "../test/render";
 import DashboardPage from "./DashboardPage";
@@ -51,8 +51,13 @@ const products = [
 ];
 
 describe("DashboardPage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     mocks.list.mockResolvedValue(products);
     mocks.create.mockResolvedValue({ id: 3 });
     mocks.update.mockResolvedValue({ id: 1 });
@@ -123,6 +128,52 @@ describe("DashboardPage", () => {
     await waitFor(() => {
       expect(mocks.remove).toHaveBeenCalledWith(1);
     });
+  });
+
+  it("paginates the product table", async () => {
+    const many = Array.from({ length: 25 }, (_, index) => ({
+      ...products[0],
+      id: index + 1,
+      name: `Pieza ${index + 1}`,
+    }));
+    mocks.list.mockResolvedValue(many);
+    const user = userEvent.setup();
+    renderWithProviders(<DashboardPage />);
+    await screen.findByText("Pieza 1");
+
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+
+    await waitFor(() => {
+      expect(mocks.list).toHaveBeenLastCalledWith({
+        only_active: false,
+        skip: 25,
+        limit: 25,
+      });
+    });
+  });
+
+  it("shows the load error with a retry button", async () => {
+    mocks.list.mockRejectedValueOnce(new Error("boom"));
+    const user = userEvent.setup();
+    renderWithProviders(<DashboardPage />);
+
+    expect(await screen.findByText("No se pudieron cargar los productos.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("Servomotor X1")).toBeInTheDocument();
+  });
+
+  it("does not deactivate a product when the confirmation is rejected", async () => {
+    window.confirm.mockReturnValue(false);
+    const user = userEvent.setup();
+    renderWithProviders(<DashboardPage />);
+    await screen.findByText("Servomotor X1");
+
+    const row = screen.getByText("Servomotor X1").closest("tr");
+    await user.click(within(row).getByRole("button", { name: "Desactivar" }));
+
+    expect(mocks.remove).not.toHaveBeenCalled();
   });
 
   it("shows the save error", async () => {

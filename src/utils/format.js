@@ -1,5 +1,6 @@
-export const money = (value) =>
-  new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number(value));
+const euroFormat = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+
+export const money = (value) => euroFormat.format(Number(value));
 
 const ICONS = {
   Procesadores: "▚",

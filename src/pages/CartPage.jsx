@@ -1,17 +1,46 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import { ordersApi } from "../api/services";
+import { useToast } from "../context/ToastContext";
+import { ordersApi, productsApi } from "../api/services";
 import { money } from "../utils/format";
+import { getErrorMessage } from "../utils/errors";
 
 export default function CartPage() {
-  const { items, setQuantity, remove, clear, total } = useCart();
+  const { items, setQuantity, remove, clear } = useCart();
   const { user } = useAuth();
+  const { notify } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const productQueries = useQueries({
+    queries: items.map((item) => ({
+      queryKey: ["product", item.product_id],
+      queryFn: () => productsApi.get(item.product_id),
+      retry: false,
+    })),
+  });
+
+  const lines = items.map((item, index) => {
+    const current = productQueries[index]?.data;
+    const missing = Boolean(productQueries[index]?.isError);
+    return {
+      ...item,
+      name: current?.name ?? item.name,
+      price: current ? Number(current.price) : item.price,
+      stock: current ? current.stock : item.stock,
+      available: !missing && current?.is_active !== false,
+    };
+  });
+
+  const total = lines.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const unavailable = lines.some((i) => !i.available);
+  const overStock = lines.some((i) => i.available && i.stock < i.quantity);
 
   const checkout = async () => {
     setError("");
@@ -21,11 +50,16 @@ export default function CartPage() {
     }
     setLoading(true);
     try {
-      await ordersApi.create(items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })));
+      await ordersApi.create(
+        lines.map((i) => ({ product_id: i.product_id, quantity: i.quantity }))
+      );
       clear();
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notify("Pedido creado correctamente.");
       navigate("/pedidos");
     } catch (err) {
-      setError(err.response?.data?.detail || "No se pudo procesar el pedido");
+      setError(getErrorMessage(err, "No se pudo procesar el pedido"));
     } finally {
       setLoading(false);
     }
@@ -56,16 +90,35 @@ export default function CartPage() {
         </div>
       </div>
 
-      {error && <div className="alert error">{error}</div>}
+      {error && (
+        <div className="alert error" role="alert">
+          {error}
+        </div>
+      )}
+      {unavailable && (
+        <div className="alert error" role="alert">
+          Algunos productos ya no están disponibles. Quítalos para continuar.
+        </div>
+      )}
+      {overStock && (
+        <div className="alert error" role="alert">
+          Hay cantidades por encima del stock actual. Ajusta el carrito para continuar.
+        </div>
+      )}
 
       <div className="card">
-        {items.map((i) => (
+        {lines.map((i) => (
           <div className="cart-line" key={i.product_id}>
             <div style={{ flex: 1 }}>
               <strong>{i.name}</strong>
               <div className="muted" style={{ fontSize: "0.8rem" }}>
-                {money(i.price)} c/u
+                {i.available ? `${money(i.price)} c/u` : "No disponible"}
               </div>
+              {i.available && i.stock < i.quantity && (
+                <div className="muted" style={{ fontSize: "0.8rem" }}>
+                  Stock actual: {i.stock}
+                </div>
+              )}
             </div>
             <input
               aria-label={`Cantidad de ${i.name}`}
@@ -76,7 +129,7 @@ export default function CartPage() {
               value={i.quantity}
               onChange={(e) => setQuantity(i.product_id, Math.max(1, Number(e.target.value)))}
             />
-            <span style={{ width: 110, textAlign: "right" }}>{money(i.price * i.quantity)}</span>
+            <span className="cart-line-total">{money(i.price * i.quantity)}</span>
             <button className="btn sm danger" onClick={() => remove(i.product_id)}>
               Quitar
             </button>
@@ -89,10 +142,20 @@ export default function CartPage() {
         </div>
 
         <div className="row" style={{ marginTop: "1rem" }}>
-          <button className="btn ghost" onClick={clear}>
+          <button
+            className="btn ghost"
+            onClick={() => {
+              if (!window.confirm("¿Vaciar el carrito?")) return;
+              clear();
+            }}
+          >
             Vaciar
           </button>
-          <button className="btn primary right" onClick={checkout} disabled={loading}>
+          <button
+            className="btn primary right"
+            onClick={checkout}
+            disabled={loading || unavailable || overStock}
+          >
             {loading ? "Procesando..." : user ? "Confirmar pedido" : "Inicia sesión para pedir"}
           </button>
         </div>

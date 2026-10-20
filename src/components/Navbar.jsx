@@ -61,7 +61,12 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
 
       <div className="spacer" />
 
-      <button className="icon-btn" onClick={toggle} title="Cambiar tema">
+      <button
+        className="icon-btn"
+        onClick={toggle}
+        title="Cambiar tema"
+        aria-label={theme === "dark" ? "Activar tema claro" : "Activar tema oscuro"}
+      >
         {theme === "dark" ? "☀" : "☾"}
       </button>
 

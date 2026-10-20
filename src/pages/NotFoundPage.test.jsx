@@ -14,9 +14,6 @@ describe("NotFoundPage", () => {
     renderWithProviders(<NotFoundPage />);
 
     expect(screen.getByText("Señal perdida")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Volver al catálogo" })).toHaveAttribute(
-      "href",
-      "/"
-    );
+    expect(screen.getByRole("link", { name: "Volver al catálogo" })).toHaveAttribute("href", "/");
   });
 });
