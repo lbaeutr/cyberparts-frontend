@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   login: vi.fn(),
   logout: vi.fn(),
   register: vi.fn(),
+  exchangeOAuth: vi.fn(),
 }));
 
 vi.mock("../api/client", () => ({
@@ -27,6 +28,7 @@ vi.mock("../api/services", () => ({
     login: mocks.login,
     logout: mocks.logout,
     register: mocks.register,
+    exchangeOAuth: mocks.exchangeOAuth,
   },
 }));
 
@@ -41,6 +43,7 @@ function Probe() {
       <button onClick={() => auth.login("neo", "Matrix123!")}>login</button>
       <button onClick={() => auth.register({ username: "neo" })}>register</button>
       <button onClick={auth.logout}>logout</button>
+      <button onClick={() => auth.completeOAuth("code-1")}>oauth</button>
     </div>
   );
 }
@@ -69,6 +72,10 @@ describe("AuthContext", () => {
     });
     mocks.logout.mockResolvedValue(undefined);
     mocks.register.mockResolvedValue(undefined);
+    mocks.exchangeOAuth.mockResolvedValue({
+      access_token: "oauth-access",
+      user: { username: "octocat", role: "CLIENTE" },
+    });
   });
 
   it("restores the session with the refresh token", async () => {
@@ -113,6 +120,18 @@ describe("AuthContext", () => {
       expect(mocks.login).toHaveBeenCalledWith({ username: "neo", password: undefined })
     );
     expect(mocks.register).toHaveBeenCalledWith({ username: "neo" });
+  });
+
+  it("completes the oauth exchange and stores the session", async () => {
+    const user = userEvent.setup();
+    renderAuth();
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("anon"));
+
+    await user.click(screen.getByRole("button", { name: "oauth" }));
+
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("octocat"));
+    expect(mocks.exchangeOAuth).toHaveBeenCalledWith("code-1");
+    expect(mocks.setAccessToken).toHaveBeenCalledWith("oauth-access");
   });
 
   it("clears the session on logout even if the request fails", async () => {

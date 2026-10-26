@@ -91,6 +91,14 @@ describe("api client", () => {
     expect(axiosMock.history.post).toHaveLength(0);
   });
 
+  it("does not try to refresh a failed oauth exchange", async () => {
+    apiMock.onPost("/auth/oauth/exchange").reply(401);
+
+    await expect(api.post("/auth/oauth/exchange", { code: "caducado" })).rejects.toBeTruthy();
+
+    expect(axiosMock.history.post).toHaveLength(0);
+  });
+
   it("does not retry the refresh endpoint", async () => {
     apiMock.onPost("/auth/refresh").reply(401);
 

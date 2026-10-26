@@ -12,11 +12,13 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const OAuthCallbackPage = lazy(() => import("./pages/OAuthCallbackPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 export default function App() {
   return (
     <Routes>
+      <Route path="oauth/callback" element={<OAuthCallbackPage />} />
       <Route element={<AppLayout />}>
         <Route index element={<CatalogPage />} />
         <Route path="producto/:id" element={<ProductDetailPage />} />

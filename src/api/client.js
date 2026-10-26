@@ -58,7 +58,9 @@ api.interceptors.response.use(
   async (error) => {
     const { response, config } = error;
     const isAuthCall =
-      config?.url?.includes("/auth/refresh") || config?.url?.includes("/auth/login");
+      config?.url?.includes("/auth/refresh") ||
+      config?.url?.includes("/auth/login") ||
+      config?.url?.includes("/auth/oauth/exchange");
 
     const deactivated =
       response?.status === 403 && /desactivad/i.test(String(response?.data?.detail ?? ""));

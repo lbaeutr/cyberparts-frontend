@@ -496,6 +496,31 @@ textarea:focus {
 .auth-wrap .card {
   padding: 1.75rem;
 }
+.btn.github {
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+.btn.github:hover {
+  text-decoration: none;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0 0.25rem;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
 .muted {
   color: var(--text-dim);

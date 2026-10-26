@@ -49,6 +49,17 @@ describe("api services", () => {
     });
   });
 
+  it("exchanges the oauth code", async () => {
+    mock
+      .onPost("/auth/oauth/exchange", { code: "oauth-code" })
+      .reply(200, { access_token: "access", user: { username: "octocat" } });
+
+    await expect(authApi.exchangeOAuth("oauth-code")).resolves.toEqual({
+      access_token: "access",
+      user: { username: "octocat" },
+    });
+  });
+
   it("updates users and closes the session", async () => {
     mock.onGet("/users", { params: { limit: 200 } }).reply(200, [{ id: 1 }]);
     mock.onPatch("/users/2/role").reply(200, { id: 2, role: "GESTOR" });

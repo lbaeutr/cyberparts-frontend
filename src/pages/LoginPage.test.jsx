@@ -41,6 +41,15 @@ describe("LoginPage", () => {
     expect(await screen.findByText("pagina inicio")).toBeInTheDocument();
   });
 
+  it("links to the GitHub OAuth flow", () => {
+    renderLogin();
+
+    expect(screen.getByRole("link", { name: "Entrar con GitHub" })).toHaveAttribute(
+      "href",
+      "/api/auth/oauth/github/start"
+    );
+  });
+
   it("redirects authenticated users to the catalog", async () => {
     auth.current = { user: { username: "neo" }, initializing: false, login: vi.fn() };
     renderLogin();

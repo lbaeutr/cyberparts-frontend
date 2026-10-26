@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
+import GitHubLoginButton from "../components/GitHubLoginButton";
 import { useAuth } from "../context/AuthContext";
 import { getErrorMessage } from "../utils/errors";
 
@@ -83,6 +84,9 @@ export default function RegisterPage() {
             {loading ? "Creando..." : "Registrarme"}
           </button>
         </form>
+
+        <div className="auth-divider">o</div>
+        <GitHubLoginButton label="Registrarme con GitHub" />
 
         <p className="muted center" style={{ fontSize: "0.85rem", marginTop: "1rem" }}>
           ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>

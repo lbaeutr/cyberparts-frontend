@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { authApi } from "../api/services";
@@ -16,8 +24,10 @@ export function AuthProvider({ children }) {
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  const sessionSettledRef = useRef(false);
 
   const resetSession = useCallback(() => {
+    sessionSettledRef.current = true;
     setUser(null);
     queryClient.clear();
     window.dispatchEvent(new Event(SESSION_RESET_EVENT));
@@ -39,9 +49,9 @@ export function AuthProvider({ children }) {
     (async () => {
       try {
         const data = await refreshSession();
-        if (mounted) setUser(data.user);
+        if (mounted && !sessionSettledRef.current) setUser(data.user);
       } catch {
-        if (mounted) setUser(null);
+        if (mounted && !sessionSettledRef.current) setUser(null);
       } finally {
         if (mounted) setInitializing(false);
       }
@@ -54,6 +64,19 @@ export function AuthProvider({ children }) {
   const login = useCallback(
     async (username, password) => {
       const data = await authApi.login({ username, password });
+      sessionSettledRef.current = true;
+      setAccessToken(data.access_token);
+      queryClient.clear();
+      setUser(data.user);
+      return data.user;
+    },
+    [queryClient]
+  );
+
+  const completeOAuth = useCallback(
+    async (code) => {
+      sessionSettledRef.current = true;
+      const data = await authApi.exchangeOAuth(code);
       setAccessToken(data.access_token);
       queryClient.clear();
       setUser(data.user);
@@ -88,9 +111,10 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      completeOAuth,
       hasRole: (...roles) => Boolean(user) && roles.includes(user.role),
     }),
-    [user, initializing, login, register, logout]
+    [user, initializing, login, register, logout, completeOAuth]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

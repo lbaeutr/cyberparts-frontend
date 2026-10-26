@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
+import GitHubLoginButton from "../components/GitHubLoginButton";
 import { useAuth } from "../context/AuthContext";
 import { getErrorMessage } from "../utils/errors";
 
@@ -69,6 +70,9 @@ export default function LoginPage() {
             {loading ? "Verificando..." : "Entrar"}
           </button>
         </form>
+
+        <div className="auth-divider">o</div>
+        <GitHubLoginButton />
 
         <p className="muted center" style={{ fontSize: "0.85rem", marginTop: "1rem" }}>
           ¿Sin cuenta? <Link to="/register">Regístrate</Link>
