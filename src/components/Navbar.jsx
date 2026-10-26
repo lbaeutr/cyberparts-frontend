@@ -73,9 +73,14 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
       {user ? (
         <div className="row" style={{ gap: "0.5rem" }}>
           <span className={`badge role-${user.role} hide-sm`}>{ROLE_LABEL[user.role]}</span>
-          <span className="mono hide-sm" style={{ fontSize: "0.85rem" }}>
+          <Link
+            className="mono hide-sm"
+            to="/perfil"
+            style={{ fontSize: "0.85rem" }}
+            title="Mi perfil"
+          >
             {user.username}
-          </span>
+          </Link>
           <button className="btn sm ghost" onClick={handleLogout}>
             Salir
           </button>

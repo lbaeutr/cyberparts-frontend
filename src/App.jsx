@@ -12,6 +12,7 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const OAuthCallbackPage = lazy(() => import("./pages/OAuthCallbackPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
@@ -30,6 +31,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <OrdersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="perfil"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

@@ -5,6 +5,10 @@ export const authApi = {
   login: (data) => api.post("/auth/login", data).then((r) => r.data),
   logout: () => api.post("/auth/logout").then((r) => r.data),
   exchangeOAuth: (code) => api.post("/auth/oauth/exchange", { code }).then((r) => r.data),
+  changePassword: (data) => api.post("/auth/password", data).then((r) => r.data),
+  oauthAccounts: () => api.get("/auth/oauth/accounts").then((r) => r.data),
+  startGithubLink: () => api.get("/auth/oauth/github/link/start").then((r) => r.data),
+  unlinkGithub: () => api.delete("/auth/oauth/github").then((r) => r.data),
 };
 
 export const productsApi = {

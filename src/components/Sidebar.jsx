@@ -90,6 +90,14 @@ export default function Sidebar({ open, onClose }) {
             <span>⌘</span> Pedidos
           </Link>
         )}
+        {user && (
+          <Link
+            className={`side-link${location.pathname === "/perfil" ? " active" : ""}`}
+            to="/perfil"
+          >
+            <span>☺</span> Mi perfil
+          </Link>
+        )}
 
         <h4>Categorías</h4>
         <Link className={`side-link${isCatalog && !activeCategory ? " active" : ""}`} to="/">

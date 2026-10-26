@@ -69,4 +69,24 @@ describe("api services", () => {
     await expect(usersApi.setRole(2, "GESTOR")).resolves.toEqual({ id: 2, role: "GESTOR" });
     await expect(authApi.logout()).resolves.toBeUndefined();
   });
+
+  it("manages the profile password and github link", async () => {
+    mock.onPost("/auth/password").reply(204);
+    mock.onGet("/auth/oauth/accounts").reply(200, { github: { username: "octocat" } });
+    mock
+      .onGet("/auth/oauth/github/link/start")
+      .reply(200, { authorize_url: "https://github.com/login/oauth/authorize" });
+    mock.onDelete("/auth/oauth/github").reply(204);
+
+    await expect(
+      authApi.changePassword({ current_password: "Test1234!", new_password: "Nueva123!" })
+    ).resolves.toBeUndefined();
+    await expect(authApi.oauthAccounts()).resolves.toEqual({
+      github: { username: "octocat" },
+    });
+    await expect(authApi.startGithubLink()).resolves.toEqual({
+      authorize_url: "https://github.com/login/oauth/authorize",
+    });
+    await expect(authApi.unlinkGithub()).resolves.toBeUndefined();
+  });
 });

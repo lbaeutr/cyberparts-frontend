@@ -63,6 +63,12 @@ describe("App routing", () => {
     expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
   });
 
+  it("protects the profile route", async () => {
+    renderWithProviders(<App />, { route: "/perfil" });
+
+    expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
+  });
+
   it("shows the not found page", async () => {
     renderWithProviders(<App />, { route: "/ruta-inexistente" });
 
