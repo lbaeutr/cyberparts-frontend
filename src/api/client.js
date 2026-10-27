@@ -78,6 +78,10 @@ api.interceptors.response.use(
         config.headers.Authorization = `Bearer ${accessToken}`;
         return api(config);
       } catch (refreshError) {
+        // Un 429 es temporal: no cerramos la sesion, solo se propaga el error.
+        if (refreshError?.response?.status === 429) {
+          return Promise.reject(refreshError);
+        }
         setAccessToken(null);
         if (onUnauthorized) onUnauthorized();
         return Promise.reject(refreshError);

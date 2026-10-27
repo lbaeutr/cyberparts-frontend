@@ -83,6 +83,23 @@ describe("api client", () => {
     expect(getAccessToken()).toBeNull();
   });
 
+  it("keeps the session when the refresh is rate limited", async () => {
+    const onUnauthorized = vi.fn();
+    setAccessToken("old-token");
+    setUnauthorizedHandler(onUnauthorized);
+    apiMock.onGet("/data").reply(401);
+    axiosMock
+      .onPost("/api/auth/refresh")
+      .reply(429, { detail: "Demasiados intentos. Prueba de nuevo en 12 s." });
+
+    await expect(api.get("/data")).rejects.toMatchObject({
+      response: { status: 429 },
+    });
+
+    expect(onUnauthorized).not.toHaveBeenCalled();
+    expect(getAccessToken()).toBe("old-token");
+  });
+
   it("does not try to refresh a failed login", async () => {
     apiMock.onPost("/auth/login").reply(401);
 
