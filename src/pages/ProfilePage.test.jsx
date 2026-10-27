@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   startGithubLink: vi.fn(),
   unlinkGithub: vi.fn(),
   redirectTo: vi.fn(),
+  refreshUser: vi.fn(),
 }));
 
 const authState = vi.hoisted(() => ({ user: null }));
@@ -28,7 +29,7 @@ vi.mock("../utils/navigation", () => ({ redirectTo: mocks.redirectTo }));
 
 vi.mock("../context/AuthContext", () => ({
   AuthProvider: ({ children }) => children,
-  useAuth: () => ({ user: authState.user }),
+  useAuth: () => ({ user: authState.user, refreshUser: mocks.refreshUser }),
 }));
 
 const linkedAccount = {
@@ -67,6 +68,7 @@ describe("ProfilePage", () => {
       authorize_url: "https://github.com/login/oauth/authorize?state=x",
     });
     mocks.unlinkGithub.mockResolvedValue(undefined);
+    mocks.refreshUser.mockResolvedValue(authState.user);
   });
 
   it("renders the account data and the link button", async () => {
@@ -93,6 +95,27 @@ describe("ProfilePage", () => {
     const button = await screen.findByRole("button", { name: "Desvincular GitHub" });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("title", "Define una contraseña antes de desvincular GitHub");
+    expect(
+      screen.getByText("Define una contraseña arriba para poder desvincular GitHub.")
+    ).toBeInTheDocument();
+  });
+
+  it("refreshes the session after setting a password", async () => {
+    authState.user = { ...authState.user, has_password: false };
+    mocks.oauthAccounts.mockResolvedValue({ github: linkedAccount });
+    mocks.refreshUser.mockImplementation(async () => {
+      authState.user = { ...authState.user, has_password: true };
+      return authState.user;
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<ProfilePage />);
+    await screen.findByRole("button", { name: "Desvincular GitHub" });
+
+    await fillPassword(user, { next: "Nueva123!", confirm: "Nueva123!" });
+
+    await waitFor(() => {
+      expect(mocks.refreshUser).toHaveBeenCalled();
+    });
   });
 
   it("rejects a mismatched confirmation without calling the API", async () => {

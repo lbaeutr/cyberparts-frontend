@@ -20,7 +20,7 @@ const OAUTH_MESSAGES = {
 };
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { notify } = useToast();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -51,10 +51,15 @@ export default function ProfilePage() {
 
   const changePassword = useMutation({
     mutationFn: authApi.changePassword,
-    onSuccess: () => {
+    onSuccess: async () => {
       setPasswordError("");
       setForm({ current: "", next: "", confirm: "" });
       notify("Contraseña actualizada.", "ok");
+      try {
+        await refreshUser();
+      } catch {
+        // Si el refresco falla, el interceptor ya gestiona la sesion.
+      }
     },
     onError: (err) => {
       setPasswordError(getErrorMessage(err, "No se pudo cambiar la contraseña."));
@@ -211,6 +216,11 @@ export default function ProfilePage() {
               <p className="muted" style={{ fontSize: "0.85rem" }}>
                 {github.email}
               </p>
+              {!user.has_password && (
+                <p className="muted" style={{ fontSize: "0.85rem" }}>
+                  Define una contraseña arriba para poder desvincular GitHub.
+                </p>
+              )}
               <button
                 className="btn danger"
                 onClick={confirmUnlink}

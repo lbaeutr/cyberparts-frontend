@@ -93,6 +93,12 @@ export function AuthProvider({ children }) {
     [login]
   );
 
+  const refreshUser = useCallback(async () => {
+    const data = await refreshSession();
+    setUser(data.user);
+    return data.user;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -112,9 +118,10 @@ export function AuthProvider({ children }) {
       register,
       logout,
       completeOAuth,
+      refreshUser,
       hasRole: (...roles) => Boolean(user) && roles.includes(user.role),
     }),
-    [user, initializing, login, register, logout, completeOAuth]
+    [user, initializing, login, register, logout, completeOAuth, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
