@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import { CATEGORIES, categoryIcon } from "../utils/format";
+import { categoryNavItems, navItems } from "../utils/navItems";
 
 export default function Sidebar({ open, onClose }) {
   const { hasRole, user } = useAuth();
@@ -12,6 +12,10 @@ export default function Sidebar({ open, onClose }) {
   const asideRef = useRef(null);
 
   const isCatalog = location.pathname === "/";
+  const items = navItems({ user, hasRole });
+  const mainItems = items.filter((item) => item.group === "main");
+  const managementItems = items.filter((item) => item.group === "management");
+  const categories = categoryNavItems();
 
   useEffect(() => {
     if (!open) return;
@@ -73,63 +77,43 @@ export default function Sidebar({ open, onClose }) {
         }}
       >
         <h4>Navegación</h4>
-        <Link className={`side-link${location.pathname === "/" ? " active" : ""}`} to="/">
-          <span>◈</span> Catálogo
-        </Link>
-        <Link
-          className={`side-link${location.pathname === "/carrito" ? " active" : ""}`}
-          to="/carrito"
-        >
-          <span>▤</span> Carrito
-        </Link>
-        {user && (
+        {mainItems.map((item) => (
           <Link
-            className={`side-link${location.pathname === "/pedidos" ? " active" : ""}`}
-            to="/pedidos"
+            key={item.to}
+            className={`side-link${location.pathname === item.to ? " active" : ""}`}
+            to={item.to}
           >
-            <span>⌘</span> Pedidos
-          </Link>
-        )}
-        {user && (
-          <Link
-            className={`side-link${location.pathname === "/perfil" ? " active" : ""}`}
-            to="/perfil"
-          >
-            <span>☺</span> Mi perfil
-          </Link>
-        )}
-
-        <h4>Categorías</h4>
-        <Link className={`side-link${isCatalog && !activeCategory ? " active" : ""}`} to="/">
-          <span>⬡</span> Todas
-        </Link>
-        {CATEGORIES.map((cat) => (
-          <Link
-            key={cat}
-            className={`side-link${isCatalog && activeCategory === cat ? " active" : ""}`}
-            to={`/?category=${encodeURIComponent(cat)}`}
-          >
-            <span>{categoryIcon(cat)}</span> {cat}
+            <span aria-hidden="true">{item.icon}</span> {item.label}
           </Link>
         ))}
 
-        {hasRole("ADMIN", "GESTOR") && (
+        <h4>Categorías</h4>
+        {categories.map((item) => (
+          <Link
+            key={item.category ?? item.to}
+            className={`side-link${
+              isCatalog && (item.category ? activeCategory === item.category : !activeCategory)
+                ? " active"
+                : ""
+            }`}
+            to={item.to}
+          >
+            <span aria-hidden="true">{item.icon}</span> {item.label}
+          </Link>
+        ))}
+
+        {managementItems.length > 0 && (
           <>
             <h4>Gestión</h4>
-            <Link
-              className={`side-link${location.pathname === "/panel" ? " active" : ""}`}
-              to="/panel"
-            >
-              <span>⚙</span> Panel gestor
-            </Link>
-            {hasRole("ADMIN") && (
+            {managementItems.map((item) => (
               <Link
-                className={`side-link${location.pathname === "/admin/usuarios" ? " active" : ""}`}
-                to="/admin/usuarios"
+                key={item.to}
+                className={`side-link${location.pathname === item.to ? " active" : ""}`}
+                to={item.to}
               >
-                <span>☰</span> Usuarios
+                <span aria-hidden="true">{item.icon}</span> {item.label}
               </Link>
-            )}
+            ))}
           </>
         )}
       </aside>

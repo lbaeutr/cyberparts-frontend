@@ -46,8 +46,35 @@ describe("AppLayout", () => {
 
     expect(screen.getByText("smith")).toBeInTheDocument();
     expect(screen.getByText("Administrador")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Panel" })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Usuarios" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Panel" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Usuarios" })).toHaveLength(2);
+  });
+
+  it("renders the same main navigation in the navbar and the sidebar", () => {
+    renderLayout();
+
+    const navbar = within(screen.getByRole("navigation"));
+    const sidebar = within(screen.getByRole("complementary"));
+
+    for (const name of ["Catálogo", "Carrito", "Pedidos", "Panel", "Usuarios"]) {
+      expect(navbar.getByRole("link", { name })).toBeInTheDocument();
+      expect(sidebar.getByRole("link", { name })).toBeInTheDocument();
+    }
+    expect(sidebar.getByRole("link", { name: "Mi perfil" })).toHaveAttribute("href", "/perfil");
+    expect(navbar.queryByRole("link", { name: "Mi perfil" })).not.toBeInTheDocument();
+  });
+
+  it("shows only the panel link to gestors", () => {
+    auth.current = {
+      user: { username: "trinity", role: "GESTOR" },
+      hasRole: (...roles) => roles.includes("GESTOR"),
+      logout: vi.fn(),
+    };
+
+    renderLayout();
+
+    expect(screen.getAllByRole("link", { name: "Panel" })).toHaveLength(2);
+    expect(screen.queryAllByRole("link", { name: "Usuarios" })).toHaveLength(0);
   });
 
   it("hides management links for clients", () => {

@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
 import { ROLE_LABEL } from "../utils/format";
+import { navItems } from "../utils/navItems";
 
 const linkClass = ({ isActive }) => `nav-item${isActive ? " active" : ""}`;
 
@@ -12,6 +13,7 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
   const { count } = useCart();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+  const items = navItems({ user, hasRole }).filter((item) => !item.sidebarOnly);
 
   const handleLogout = async () => {
     await logout();
@@ -36,27 +38,12 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
       </Link>
 
       <div className="nav-links">
-        <NavLink to="/" className={linkClass} end>
-          Catálogo
-        </NavLink>
-        <NavLink to="/carrito" className={linkClass}>
-          Carrito {count > 0 && `(${count})`}
-        </NavLink>
-        {user && (
-          <NavLink to="/pedidos" className={linkClass}>
-            Pedidos
+        {items.map((item) => (
+          <NavLink key={item.to} to={item.to} className={linkClass} end={item.end}>
+            {item.label}
+            {item.showCartCount && count > 0 && ` (${count})`}
           </NavLink>
-        )}
-        {hasRole("ADMIN", "GESTOR") && (
-          <NavLink to="/panel" className={linkClass}>
-            Panel
-          </NavLink>
-        )}
-        {hasRole("ADMIN") && (
-          <NavLink to="/admin/usuarios" className={linkClass}>
-            Usuarios
-          </NavLink>
-        )}
+        ))}
       </div>
 
       <div className="spacer" />
